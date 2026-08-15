@@ -141,6 +141,15 @@ direction from the corner.
 Default PIN is `1234`, changeable in settings. The PIN exists so that a student who
 watches the teacher perform the gesture still cannot get in.
 
+The PIN screen offers **"Reset to green"** directly, alongside "Open settings". Clearing a
+stuck yellow or ending a cooldown early is the only thing ever needed urgently mid-class,
+and routing it through the settings screen cost an extra screen and tap at exactly the
+wrong moment. Both buttons require the correct PIN, checked through one shared path so the
+two cannot drift apart.
+
+A reset shortcut *without* the PIN was considered and rejected: a student would discover it
+eventually, and skipping the cooldown is the one thing the red screen exists to prevent.
+
 ### Settings screen
 
 Contains exactly five things:
