@@ -24,9 +24,26 @@ android {
         jvmTarget = "17"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("HALLPASS_KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("HALLPASS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("HALLPASS_KEY_ALIAS")
+                keyPassword = System.getenv("HALLPASS_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Falls back to unsigned when the env vars are absent, so CI test
+            // runs and local inspection do not require the keystore.
+            if (System.getenv("HALLPASS_KEYSTORE_PATH") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
