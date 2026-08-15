@@ -19,6 +19,12 @@ class Settings(context: Context) {
             .putInt(KEY_MINUTES, SettingsRules.clampDurationMinutes(value))
             .apply()
 
+    var tapGuardSeconds: Int
+        get() = prefs.getInt(KEY_TAP_GUARD_SECONDS, SettingsRules.DEFAULT_TAP_GUARD_SECONDS)
+        set(value) = prefs.edit()
+            .putInt(KEY_TAP_GUARD_SECONDS, SettingsRules.clampTapGuardSeconds(value))
+            .apply()
+
     var pin: String
         get() = prefs.getString(KEY_PIN, SettingsRules.DEFAULT_PIN) ?: SettingsRules.DEFAULT_PIN
         set(value) {
@@ -54,15 +60,17 @@ class Settings(context: Context) {
     fun reset() = persist(Pass.reset())
 
     /**
-     * Drop a cooldown timestamp once it is in the past.
+     * Clears an expired cooldown so a backwards clock cannot resurrect RED.
      *
-     * Left in place it merely loses the `now < end` comparison -- until the
-     * clock moves backwards past it, at which point the tablet drops into RED
-     * with nobody having left the room.
+     * Deliberately waits until the tap guard has also elapsed: cooldownEndMillis
+     * is what millisSinceLastChange reads to guard GREEN, so clearing it the
+     * instant the cooldown expires would silently disable that guard.
      */
     fun clearExpiredCooldown(nowMillis: Long) {
         val end = cooldownEndMillis ?: return
-        if (nowMillis >= end) prefs.edit().putLong(KEY_COOLDOWN_END, NONE).apply()
+        if (nowMillis >= end + tapGuardSeconds * 1000L) {
+            prefs.edit().putLong(KEY_COOLDOWN_END, NONE).apply()
+        }
     }
 
     private fun persist(timestamps: PassTimestamps) {
@@ -75,6 +83,7 @@ class Settings(context: Context) {
     private companion object {
         const val NONE = -1L
         const val KEY_MINUTES = "cooldown_minutes"
+        const val KEY_TAP_GUARD_SECONDS = "tap_guard_seconds"
         const val KEY_PIN = "pin"
         const val KEY_AUTO_PIN = "auto_pin"
         const val KEY_OUT_START = "out_start"

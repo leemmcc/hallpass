@@ -116,18 +116,21 @@ class MainActivity : Activity() {
     private fun routeTouch(inCorner: Boolean, heldMillis: Long) {
         val now = System.currentTimeMillis()
         val outStart = settings.outStartMillis
-        val state = Pass.stateAt(now, outStart, settings.cooldownEndMillis)
-        // guardElapsedIn, not elapsedIn: elapsedIn's clamp is correct for the
-        // display and would jam the guard shut across a backwards clock jump.
-        val millisInState =
-            if (state == PassState.YELLOW) Pass.guardElapsedIn(now, outStart) else Long.MAX_VALUE
+        val cooldownEnd = settings.cooldownEndMillis
+        val state = Pass.stateAt(now, outStart, cooldownEnd)
+        // Time since the state last changed, for the post-change tap guard:
+        // it reads outStart for a fresh YELLOW or cooldownEnd for a fresh
+        // GREEN, whichever transition happened most recently. A backwards
+        // clock reads as MAX_VALUE so the guard fails open.
+        val millisSinceChange = Pass.millisSinceLastChange(now, outStart, cooldownEnd)
 
         when (
             TouchRouter.route(
                 inCorner = inCorner,
                 heldMillis = heldMillis,
                 state = state,
-                millisInState = millisInState
+                millisSinceChange = millisSinceChange,
+                tapGuardMillis = settings.tapGuardSeconds * 1000L
             )
         ) {
             TouchAction.GO_OUT -> { settings.goOut(now); refresh() }

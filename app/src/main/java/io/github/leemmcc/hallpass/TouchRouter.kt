@@ -10,23 +10,25 @@ enum class TouchAction { GO_OUT, RETURN, OPEN_SETTINGS, IGNORE }
 object TouchRouter {
 
     const val LONG_PRESS_MILLIS = 3_000L
-    const val TAP_GUARD_MILLIS = 2_000L
 
     fun route(
         inCorner: Boolean,
         heldMillis: Long,
         state: PassState,
-        millisInState: Long
+        millisSinceChange: Long,
+        tapGuardMillis: Long
     ): TouchAction {
         // A completed long-press is consumed: it opens settings and never
         // also advances the state, or every trip to settings would send a
-        // phantom student out of the room.
+        // phantom student out of the room. It is never guarded -- settings
+        // must stay reachable at all times.
         if (inCorner && heldMillis >= LONG_PRESS_MILLIS) return TouchAction.OPEN_SETTINGS
+
+        if (millisSinceChange < tapGuardMillis) return TouchAction.IGNORE
 
         return when (state) {
             PassState.GREEN -> TouchAction.GO_OUT
-            PassState.YELLOW ->
-                if (millisInState >= TAP_GUARD_MILLIS) TouchAction.RETURN else TouchAction.IGNORE
+            PassState.YELLOW -> TouchAction.RETURN
             PassState.RED -> TouchAction.IGNORE
         }
     }

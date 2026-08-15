@@ -160,7 +160,8 @@ class PassStateTest {
                 inCorner = false,
                 heldMillis = 10L,
                 state = PassState.YELLOW,
-                millisInState = Pass.guardElapsedIn(now, now - 1_999L)
+                millisSinceChange = Pass.guardElapsedIn(now, now - 1_999L),
+                tapGuardMillis = 2_000L
             )
         )
         assertEquals(
@@ -169,7 +170,8 @@ class PassStateTest {
                 inCorner = false,
                 heldMillis = 10L,
                 state = PassState.YELLOW,
-                millisInState = Pass.guardElapsedIn(now, now - 2_000L)
+                millisSinceChange = Pass.guardElapsedIn(now, now - 2_000L),
+                tapGuardMillis = 2_000L
             )
         )
     }
@@ -184,8 +186,48 @@ class PassStateTest {
                 inCorner = false,
                 heldMillis = 10L,
                 state = PassState.YELLOW,
-                millisInState = Pass.guardElapsedIn(now, now + 600_000L)
+                millisSinceChange = Pass.guardElapsedIn(now, now + 600_000L),
+                tapGuardMillis = 2_000L
             )
         )
+    }
+
+    // --- millisSinceLastChange: the tap guard's clock reading after any
+    // state change, not just entry into YELLOW ---
+
+    @Test
+    fun millisSinceLastChangeIsUnboundedWhenBothTimestampsAreNull() {
+        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, null, null))
+    }
+
+    @Test
+    fun millisSinceLastChangeReadsOutStartWhenSet() {
+        assertEquals(
+            30_000L,
+            Pass.millisSinceLastChange(now, now - 30_000L, null)
+        )
+    }
+
+    @Test
+    fun millisSinceLastChangeReadsCooldownEndWhenOutStartIsNull() {
+        // GREEN just arrived: outStart is null, cooldownEnd is in the past.
+        assertEquals(
+            5_000L,
+            Pass.millisSinceLastChange(now, null, now - 5_000L)
+        )
+    }
+
+    @Test
+    fun millisSinceLastChangePrefersOutStartWhenBothAreSet() {
+        assertEquals(
+            10_000L,
+            Pass.millisSinceLastChange(now, now - 10_000L, now - 999_999L)
+        )
+    }
+
+    @Test
+    fun millisSinceLastChangeTreatsBackwardsClockAsNoRecentChange() {
+        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, now + 5_000L, null))
+        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, null, now + 5_000L))
     }
 }

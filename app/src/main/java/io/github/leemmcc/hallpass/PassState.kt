@@ -60,4 +60,25 @@ object Pass {
     /** Teacher escape hatch: back to GREEN from any state. */
     fun reset(): PassTimestamps =
         PassTimestamps(outStartMillis = null, cooldownEndMillis = null)
+
+    /**
+     * Milliseconds since the state last changed, for the tap guard.
+     *
+     * No separate timestamp is stored because both transitions already record
+     * their own moment: entering YELLOW sets outStart, and the cooldown's end
+     * is exactly when GREEN arrived.
+     *
+     * Long.MAX_VALUE means "no recent change, do not guard" -- a fresh install,
+     * or after an admin reset cleared both. A backwards clock also reads as
+     * MAX_VALUE so the guard fails open rather than jamming shut.
+     */
+    fun millisSinceLastChange(
+        nowMillis: Long,
+        outStartMillis: Long?,
+        cooldownEndMillis: Long?
+    ): Long {
+        val reference = outStartMillis ?: cooldownEndMillis ?: return Long.MAX_VALUE
+        val delta = nowMillis - reference
+        return if (delta < 0L) Long.MAX_VALUE else delta
+    }
 }

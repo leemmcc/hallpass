@@ -43,6 +43,26 @@ class SettingsActivity : AutoCloseActivity() {
             }
         }
 
+        val tapGuardField = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(settings.tapGuardSeconds.toString())
+        }
+
+        val saveTapGuard = Button(this).apply {
+            text = "Save tap lockout"
+            setOnClickListener {
+                val requested = tapGuardField.text.toString().toIntOrNull()
+                if (requested == null) {
+                    toast("Enter a number")
+                } else {
+                    settings.tapGuardSeconds = requested
+                    // Read back: the setter clamps, so show what was actually stored.
+                    tapGuardField.setText(settings.tapGuardSeconds.toString())
+                    toast("Tap lockout: ${settings.tapGuardSeconds} sec")
+                }
+            }
+        }
+
         // Both PIN fields are masked, exactly as PinActivity's entry is. The
         // whole justification for having a PIN is that a student who watches
         // the gesture still cannot get in; showing the new PIN in clear text on
@@ -110,6 +130,9 @@ class SettingsActivity : AutoCloseActivity() {
                 addView(TextView(this@SettingsActivity).apply { text = "Cooldown (minutes, 1-60)" })
                 addView(minutesField)
                 addView(saveMinutes)
+                addView(TextView(this@SettingsActivity).apply { text = "Tap lockout (seconds, 0-60)" })
+                addView(tapGuardField)
+                addView(saveTapGuard)
                 addView(pinField)
                 addView(pinConfirmField)
                 addView(savePin)

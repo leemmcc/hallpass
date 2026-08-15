@@ -58,4 +58,30 @@ class SettingsRulesTest {
     fun defaultPinIsFourDigitsAndValid() {
         assertTrue(SettingsRules.isValidPin(SettingsRules.DEFAULT_PIN))
     }
+
+    @Test
+    fun negativeTapGuardClampsUpToZero() {
+        assertEquals(0, SettingsRules.clampTapGuardSeconds(-5))
+    }
+
+    @Test
+    fun zeroTapGuardIsUnchanged() {
+        // 0 is a legitimate value: it disables the guard.
+        assertEquals(0, SettingsRules.clampTapGuardSeconds(0))
+    }
+
+    @Test
+    fun inRangeTapGuardIsUnchanged() {
+        assertEquals(10, SettingsRules.clampTapGuardSeconds(10))
+    }
+
+    @Test
+    fun oversizedTapGuardClampsDownToMaximum() {
+        assertEquals(60, SettingsRules.clampTapGuardSeconds(999))
+    }
+
+    @Test
+    fun defaultTapGuardIsTenSeconds() {
+        assertEquals(10, SettingsRules.DEFAULT_TAP_GUARD_SECONDS)
+    }
 }
