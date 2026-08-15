@@ -128,4 +128,64 @@ class PassStateTest {
     fun elapsedClampsToZeroIfClockMovedBackwards() {
         assertEquals(0L, Pass.elapsedIn(now, now + 5_000L))
     }
+
+    // --- The tap guard's own clock reading ---
+    //
+    // guardElapsedIn exists because elapsedIn's clamp is right for the display
+    // and wrong for the guard: a clamped 0 would hold the guard shut for the
+    // whole of a backwards clock jump and leave the return tap inert.
+
+    @Test
+    fun guardElapsedIsUnboundedWhenNobodyIsOut() {
+        assertEquals(Long.MAX_VALUE, Pass.guardElapsedIn(now, null))
+    }
+
+    @Test
+    fun guardElapsedCountsUpFromOutStart() {
+        assertEquals(90_000L, Pass.guardElapsedIn(now, now - 90_000L))
+    }
+
+    @Test
+    fun guardElapsedTreatsBackwardsClockAsGuardAlreadySatisfied() {
+        // Unlike elapsedIn, which clamps this to 0.
+        assertEquals(Long.MAX_VALUE, Pass.guardElapsedIn(now, now + 5_000L))
+        assertEquals(0L, Pass.elapsedIn(now, now + 5_000L))
+    }
+
+    @Test
+    fun guardElapsedStillGatesTheReturnTapAtTwoSeconds() {
+        assertEquals(
+            TouchAction.IGNORE,
+            TouchRouter.route(
+                inCorner = false,
+                heldMillis = 10L,
+                state = PassState.YELLOW,
+                millisInState = Pass.guardElapsedIn(now, now - 1_999L)
+            )
+        )
+        assertEquals(
+            TouchAction.RETURN,
+            TouchRouter.route(
+                inCorner = false,
+                heldMillis = 10L,
+                state = PassState.YELLOW,
+                millisInState = Pass.guardElapsedIn(now, now - 2_000L)
+            )
+        )
+    }
+
+    @Test
+    fun backwardsClockLeavesTheReturnTapWorking() {
+        // The bug this function exists to prevent: yellow running forever
+        // because every tap is swallowed by the guard.
+        assertEquals(
+            TouchAction.RETURN,
+            TouchRouter.route(
+                inCorner = false,
+                heldMillis = 10L,
+                state = PassState.YELLOW,
+                millisInState = Pass.guardElapsedIn(now, now + 600_000L)
+            )
+        )
+    }
 }

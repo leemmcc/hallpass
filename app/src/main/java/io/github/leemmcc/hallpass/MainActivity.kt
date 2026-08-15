@@ -7,6 +7,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -17,13 +19,15 @@ class MainActivity : Activity() {
     private lateinit var settings: Settings
 
     private val handler = Handler(Looper.getMainLooper())
+
+    /** Uptime, not wall clock -- see handleTouch. */
     private var touchDownAt = 0L
     private var touchDownInCorner = false
 
     private val tick = object : Runnable {
         override fun run() {
             refresh()
-            handler.postDelayed(this, 1_000L)
+            handler.postDelayed(this, millisToNextTick())
         }
     }
 
@@ -46,6 +50,7 @@ class MainActivity : Activity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(tick)
+        clearTouch()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -55,43 +60,81 @@ class MainActivity : Activity() {
 
     private fun refresh() {
         val now = System.currentTimeMillis()
+        settings.clearExpiredCooldown(now)
         val state = Pass.stateAt(now, settings.outStartMillis, settings.cooldownEndMillis)
         val elapsed = ElapsedFormat.format(Pass.elapsedIn(now, settings.outStartMillis))
         passView.render(state, elapsed)
     }
 
+    /**
+     * Re-posting a flat 1000ms from inside run() accumulates the cost of every
+     * refresh and is not aligned to anything, so the display eventually skips a
+     * visible second. Aim at the next elapsed-second boundary instead, so the
+     * digits change at the moment the reading actually changes.
+     */
+    private fun millisToNextTick(): Long {
+        val anchor = settings.outStartMillis ?: 0L
+        val delta = System.currentTimeMillis() - anchor
+        val phase = ((delta % 1_000L) + 1_000L) % 1_000L
+        return 1_000L - phase
+    }
+
     private fun handleTouch(event: MotionEvent): Boolean {
-        when (event.action) {
+        when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                touchDownAt = System.currentTimeMillis()
+                // uptimeMillis, not the wall clock: the hold duration is purely
+                // in-memory, and a clock jump inside a 3-second press would
+                // otherwise measure garbage. The persisted timestamps below
+                // stay on the wall clock deliberately, for reboot resilience.
+                touchDownAt = SystemClock.uptimeMillis()
                 touchDownInCorner =
                     CornerTarget.contains(event.x, event.y, passView.width, passView.height)
             }
 
             MotionEvent.ACTION_UP -> {
-                val now = System.currentTimeMillis()
-                val outStart = settings.outStartMillis
-                val state = Pass.stateAt(now, outStart, settings.cooldownEndMillis)
-                val millisInState =
-                    if (state == PassState.YELLOW) Pass.elapsedIn(now, outStart) else Long.MAX_VALUE
-
-                when (
-                    TouchRouter.route(
-                        inCorner = touchDownInCorner,
-                        heldMillis = now - touchDownAt,
-                        state = state,
-                        millisInState = millisInState
-                    )
-                ) {
-                    TouchAction.GO_OUT -> { settings.goOut(now); refresh() }
-                    TouchAction.RETURN -> { settings.returnStudent(now); refresh() }
-                    TouchAction.OPEN_SETTINGS ->
-                        startActivity(Intent(this, PinActivity::class.java))
-                    TouchAction.IGNORE -> Unit
-                }
+                val heldMillis = SystemClock.uptimeMillis() - touchDownAt
+                val inCorner = touchDownInCorner
+                // Clear before routing: opening settings leaves this activity,
+                // and a stale corner flag would make the next bare ACTION_UP
+                // look like a completed long-press.
+                clearTouch()
+                routeTouch(inCorner, heldMillis)
             }
+
+            // A cancelled gesture is not a tap. Drop it without routing.
+            MotionEvent.ACTION_CANCEL -> clearTouch()
         }
         return true
+    }
+
+    private fun clearTouch() {
+        touchDownAt = 0L
+        touchDownInCorner = false
+    }
+
+    private fun routeTouch(inCorner: Boolean, heldMillis: Long) {
+        val now = System.currentTimeMillis()
+        val outStart = settings.outStartMillis
+        val state = Pass.stateAt(now, outStart, settings.cooldownEndMillis)
+        // guardElapsedIn, not elapsedIn: elapsedIn's clamp is correct for the
+        // display and would jam the guard shut across a backwards clock jump.
+        val millisInState =
+            if (state == PassState.YELLOW) Pass.guardElapsedIn(now, outStart) else Long.MAX_VALUE
+
+        when (
+            TouchRouter.route(
+                inCorner = inCorner,
+                heldMillis = heldMillis,
+                state = state,
+                millisInState = millisInState
+            )
+        ) {
+            TouchAction.GO_OUT -> { settings.goOut(now); refresh() }
+            TouchAction.RETURN -> { settings.returnStudent(now); refresh() }
+            TouchAction.OPEN_SETTINGS ->
+                startActivity(Intent(this, PinActivity::class.java))
+            TouchAction.IGNORE -> Unit
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -114,7 +157,17 @@ class MainActivity : Activity() {
         if (!alreadyPinned) {
             // Without device-owner privileges this shows a system confirmation
             // dialog rather than pinning silently. That is expected.
-            runCatching { startLockTask() }
+            //
+            // Logged rather than toasted: this runs on every launch, and a
+            // toast on every launch is noise. The settings screen's explicit
+            // "Pin app to screen" button is the one that reports to the user.
+            runCatching { startLockTask() }.onFailure {
+                Log.w(TAG, "Auto-pin failed; the tablet is not pinned", it)
+            }
         }
+    }
+
+    private companion object {
+        const val TAG = "Hallpass"
     }
 }

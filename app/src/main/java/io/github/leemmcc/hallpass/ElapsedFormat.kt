@@ -1,5 +1,7 @@
 package io.github.leemmcc.hallpass
 
+import java.util.Locale
+
 /**
  * Formats an elapsed duration for the yellow-state display.
  *
@@ -12,6 +14,9 @@ object ElapsedFormat {
     fun format(millis: Long): String {
         val safe = if (millis < 0L) 0L else millis
         val totalSeconds = safe / 1000L
-        return "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L)
+        // Locale.ROOT, not the default locale: under e.g. ar-EG the default
+        // would render Eastern Arabic digits on a wall in an English-speaking
+        // classroom.
+        return String.format(Locale.ROOT, "%d:%02d", totalSeconds / 60L, totalSeconds % 60L)
     }
 }

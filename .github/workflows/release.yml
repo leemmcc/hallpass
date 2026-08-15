@@ -27,6 +27,11 @@ jobs:
       - name: Run unit tests
         run: gradle --no-daemon testDebugUnitTest
 
+      # The tag is the only source of truth for the version, so the build on
+      # the wall can be identified from the tablet's app info.
+      - name: Derive version from tag
+        run: echo "HALLPASS_VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       - name: Restore keystore
         env:
           KEYSTORE_B64: ${{ secrets.HALLPASS_KEYSTORE_B64 }}

@@ -25,8 +25,13 @@ class Settings(context: Context) {
             if (SettingsRules.isValidPin(value)) prefs.edit().putString(KEY_PIN, value).apply()
         }
 
+    /**
+     * Defaults to on. Screen pinning is the only thing between the class and
+     * the rest of the tablet, and a fresh install or a reboot with this off
+     * puts an unpinned tablet on the wall until someone notices.
+     */
     var autoPin: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_PIN, false)
+        get() = prefs.getBoolean(KEY_AUTO_PIN, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_PIN, value).apply()
 
     val outStartMillis: Long?
@@ -47,6 +52,18 @@ class Settings(context: Context) {
         persist(Pass.returnStudent(nowMillis, cooldownMinutes))
 
     fun reset() = persist(Pass.reset())
+
+    /**
+     * Drop a cooldown timestamp once it is in the past.
+     *
+     * Left in place it merely loses the `now < end` comparison -- until the
+     * clock moves backwards past it, at which point the tablet drops into RED
+     * with nobody having left the room.
+     */
+    fun clearExpiredCooldown(nowMillis: Long) {
+        val end = cooldownEndMillis ?: return
+        if (nowMillis >= end) prefs.edit().putLong(KEY_COOLDOWN_END, NONE).apply()
+    }
 
     private fun persist(timestamps: PassTimestamps) {
         prefs.edit()

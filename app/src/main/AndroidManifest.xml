@@ -3,7 +3,9 @@
 
     <application
         android:allowBackup="false"
-        android:label="Hall Pass">
+        android:icon="@mipmap/ic_launcher"
+        android:label="Hall Pass"
+        android:roundIcon="@mipmap/ic_launcher_round">
 
         <activity
             android:name=".MainActivity"

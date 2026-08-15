@@ -25,6 +25,21 @@ object Pass {
         return if (delta < 0L) 0L else delta
     }
 
+    /**
+     * Time in YELLOW for the tap guard's purposes.
+     *
+     * Deliberately not elapsedIn: that clamps a backwards clock to 0 so the
+     * display never shows a negative timer, but feeding the clamped value to
+     * the guard would make a backwards clock jump render the return tap
+     * permanently inert. Here a backwards clock reads as "guard already
+     * satisfied", which fails safe -- a student can always get back in.
+     */
+    fun guardElapsedIn(nowMillis: Long, outStartMillis: Long?): Long {
+        if (outStartMillis == null) return Long.MAX_VALUE
+        val delta = nowMillis - outStartMillis
+        return if (delta < 0L) Long.MAX_VALUE else delta
+    }
+
     /** GREEN -> YELLOW. A student has left. */
     fun goOut(nowMillis: Long): PassTimestamps =
         PassTimestamps(outStartMillis = nowMillis, cooldownEndMillis = null)
