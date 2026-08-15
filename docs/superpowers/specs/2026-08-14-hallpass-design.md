@@ -155,6 +155,35 @@ would be the single most attractive button for a student to press — but it doe
 clearing a stuck yellow takes a few seconds of gesture and PIN entry. If that proves too
 slow in practice, a dedicated teacher gesture can be added later.
 
+### Both settings screens close themselves
+
+The PIN screen and the settings screen each finish on `onStop`, and after 60 seconds of no
+interaction.
+
+This is not tidiness. Without it, a teacher interrupted mid-change leaves an editable
+"Change PIN" field on the wall at child height for the rest of the period. A student who
+sets a PIN nobody knows locks her out permanently — recovery means exiting screen pinning
+with the device lock PIN, then uninstalling and reinstalling, losing all settings.
+
+`onStop` rather than `onPause`, specifically: the screen-pinning confirmation is a system
+dialog that pauses but does not stop the activity beneath it. Using `onPause` would dismiss
+the settings screen out from under its own confirmation prompt.
+
+Both screens also hold `FLAG_KEEP_SCREEN_ON`. The main display holds it too, but without it
+here the tablet's normal timeout blanks the wall while settings are open.
+
+### Changing the PIN
+
+Both the new-PIN and confirm-PIN fields are masked, and the change is only saved when the
+two match and the format is valid.
+
+Masking matters more here than on the entry screen. The stated reason for having a PIN at
+all is that a student who watches the teacher perform the corner gesture still cannot get
+in — and an unmasked field would display the new PIN, in large type, to the whole room at
+the exact moment it is chosen. The confirmation field exists because a single mistyped digit
+would otherwise silently set a PIN the teacher does not know, with the same lockout
+consequence as above.
+
 ### Always-on display
 
 The app holds `FLAG_KEEP_SCREEN_ON` and runs in immersive full-screen mode, hiding the
@@ -172,6 +201,16 @@ lock PIN.
 The app calls `startLockTask()` itself, so re-pinning after a reboot is one tap rather than
 a trip through system settings. With "auto-pin on launch" enabled, the app requests pinning
 on start and the user only confirms the system dialog.
+
+**Auto-pin defaults to on.** With it off, a fresh install runs unpinned: a swipe reveals the
+navigation bar and Home exits the app, so the classroom loses its display until an adult
+notices. Shipping locked-down by default is the right posture for this device; it remains
+switchable in settings.
+
+Pinning reports its outcome. Every other control on the settings screen shows a toast, so a
+silent failure would read as success — the teacher taps "Pin app to screen", sees nothing,
+and walks away from an unpinned tablet. Since pinning is the only thing standing between the
+class and the rest of the device, both success and failure are announced.
 
 Rejected alternative: registering the app as the device's Home launcher. Stronger (survives
 reboot with no interaction) but takes over the tablet entirely. Not wanted.
@@ -276,8 +315,17 @@ lifecycle code and under test.
 - Screen pinning engages and resists exit
 - Screen stays awake indefinitely while plugged in
 - ✓, ✕, and the yellow timer digits are all legible from the back of a classroom
+- **The three states carry equal visual weight.** The digits are fitted by measuring rendered
+  glyph bounds, not by setting a font size — font `textSize` is the em size, so setting it to
+  40% of the screen would render digits roughly 40% smaller than the ✓/✕. Check by eye that
+  they match.
+- **`72:15` in portrait does not clip or touch the screen edges.** The fitted size is clamped
+  to 90% of the width, but the clamp is unverifiable without the device.
 - The yellow timer ticks once per second and does not visibly stutter or drift
 - Dark-on-amber contrast holds up under real classroom lighting, including glare
+- Settings and the PIN screen both close themselves after 60 seconds untouched, and on leaving
+- Changing the PIN requires a matching confirmation, and neither field shows the digits
+- "Pin app to screen" reports success or failure rather than doing nothing visible
 - Colors are distinguishable in real classroom lighting
 
 No emulator and no instrumented tests. Not worth the setup at this size.
