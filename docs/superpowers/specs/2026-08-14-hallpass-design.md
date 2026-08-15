@@ -375,6 +375,31 @@ and turn updates into a single tap.
 - **Screen pinning must be re-engaged after a reboot**, reduced to one confirmation tap by
   the auto-pin setting.
 
+## Known limitations
+
+Found by review, deliberately left unfixed. Recorded so they are not rediscovered as new.
+
+- **The settings idle-timeout may not reset while typing.** The 60-second timer resets on
+  `onUserInteraction()`, which many soft keyboards do not trigger per keystroke — they commit
+  text without dispatching key events the activity sees. The fields are a 4-digit PIN and a
+  1–2 digit number, so entry takes seconds against a 60-second timeout, and a genuine stall
+  mid-entry closing the screen is the safe outcome.
+- **A malformed release tag produces a bad version code.** `versionCodeFrom` yields `0` for a
+  tag whose leading component is non-numeric (`v-nightly`), which is lower than the untagged
+  default of `1`. Only reachable by hand-pushing a malformed tag past the `v*` filter. Worth a
+  guard if tagging is ever automated.
+- **The `-1L` "absent" sentinel** would collide with a real timestamp only on a device whose
+  clock is set before 1970. Not reachable in practice.
+- **Release signing is gated on one env var,** not all three. Fails loud rather than dangerous:
+  with no signing config, AGP emits `app-release-unsigned.apk`, which does not match the
+  workflow's upload glob, so a release would land with no asset rather than an unsigned one.
+- **The signing key exists only as a GitHub secret** and cannot be read back. If the repo is
+  deleted, the key is unrecoverable and future versions could only be installed by uninstalling
+  first, losing settings.
+- **A child tapping twice, two seconds apart, burns a full cooldown** with nobody having left
+  the room. This follows directly from the tap guard's size and is expected behavior, not a
+  malfunction — worth knowing before it gets reported as a bug.
+
 ## Deferred ideas
 
 Not in scope now; recorded so they are not rediscovered as novel:
