@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Round variant for API 25 launchers that ask for one. Same reasoning as
+    ic_launcher.xml: the -v26 adaptive icon is invisible to older devices, so a
+    default-configuration resource has to exist or the reference dangles.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/ic_launcher_background" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

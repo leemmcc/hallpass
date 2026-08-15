@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -152,8 +153,16 @@ class MainActivity : Activity() {
 
     private fun requestLockTask() {
         val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        @Suppress("DEPRECATION")
-        val alreadyPinned = am.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
+        // lockTaskModeState arrived in API 23; below that only the boolean
+        // isInLockTaskMode exists. minSdk is 21 because the classroom tablet
+        // turned out to be older than expected, so both paths are live.
+        val alreadyPinned =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
+            } else {
+                @Suppress("DEPRECATION")
+                am.isInLockTaskMode
+            }
         if (!alreadyPinned) {
             // Without device-owner privileges this shows a system confirmation
             // dialog rather than pinning silently. That is expected.

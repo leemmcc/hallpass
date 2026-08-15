@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher icon for API 21-25, which has no adaptive-icon support.
+
+    mipmap-anydpi-v26/ic_launcher.xml overrides this on API 26+. Without this
+    file, @mipmap/ic_launcher resolves to nothing below API 26 -- the resource
+    exists only in a -v26 qualified folder, so an older device finds no match.
+
+    Same green and same check as the adaptive version, composed by hand rather
+    than by the launcher's mask.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/ic_launcher_background" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

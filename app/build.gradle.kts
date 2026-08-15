@@ -46,7 +46,16 @@ android {
 
     defaultConfig {
         applicationId = "io.github.leemmcc.hallpass"
-        minSdk = 26
+        // 21, not 26. The classroom tablet turned out to run Android 7 or
+        // older, and an APK whose minSdkVersion exceeds the device's API level
+        // fails to install with "There was a problem parsing the package" --
+        // an error that says nothing about the actual cause.
+        //
+        // 21 is the floor: Theme.Material, which every activity uses, arrived
+        // there. Nothing else in the app needs anything newer, given the
+        // API 23 guard in MainActivity.requestLockTask and the non-adaptive
+        // launcher icon in res/mipmap/.
+        minSdk = 21
         targetSdk = 35
         versionCode = resolvedVersionCode
         versionName = resolvedVersionName
