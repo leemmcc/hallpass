@@ -3,8 +3,9 @@
     Launcher icon for API 21-25, which has no adaptive-icon support.
 
     mipmap-anydpi-v26/ic_launcher.xml overrides this on API 26+. Without this
-    file, @mipmap/ic_launcher resolves to nothing below API 26 -- the resource
-    exists only in a -v26 qualified folder, so an older device finds no match.
+    file, @mipmap/ic_launcher resolves to nothing below API 26, because the
+    resource exists only in a -v26 qualified folder and an older device finds
+    no matching configuration.
 
     Same green and same check as the adaptive version, composed by hand rather
     than by the launcher's mask.
