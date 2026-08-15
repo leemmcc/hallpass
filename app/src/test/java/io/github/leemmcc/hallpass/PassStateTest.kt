@@ -1,6 +1,7 @@
 package io.github.leemmcc.hallpass
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PassStateTest {
@@ -39,12 +40,78 @@ class PassStateTest {
         assertEquals(PassState.RED, Pass.stateAt(now, now - 300_000L, now + 60_000L))
     }
 
+    // --- Transitions, and the invariant they exist to guarantee ---
+
     @Test
-    fun expiringCooldownFallsThroughToGreenNotBackToYellow() {
-        // This is the regression this whole file exists to catch. Entering RED
-        // is supposed to clear outStart; if it ever fails to, an expiring
-        // cooldown would drop back into YELLOW and strand the tablet forever.
-        assertEquals(PassState.GREEN, Pass.stateAt(now, null, now - 1L))
+    fun goOutMarksStudentOutAndClearsAnyCooldown() {
+        val t = Pass.goOut(now)
+        assertEquals(now, t.outStartMillis)
+        assertNull(t.cooldownEndMillis)
+        assertEquals(PassState.YELLOW, Pass.stateAt(now, t.outStartMillis, t.cooldownEndMillis))
+    }
+
+    @Test
+    fun returnStudentClearsOutStart() {
+        // The invariant. If this ever returns non-null, the tablet strands
+        // itself in YELLOW when the cooldown expires.
+        val t = Pass.returnStudent(now, 5)
+        assertNull(t.outStartMillis)
+    }
+
+    @Test
+    fun returnStudentSetsCooldownEndFromMinutes() {
+        val t = Pass.returnStudent(now, 5)
+        assertEquals(now + 300_000L, t.cooldownEndMillis)
+    }
+
+    @Test
+    fun returnStudentPutsUsInRedForTheWholeCooldown() {
+        val t = Pass.returnStudent(now, 5)
+        assertEquals(PassState.RED, Pass.stateAt(now, t.outStartMillis, t.cooldownEndMillis))
+        assertEquals(
+            PassState.RED,
+            Pass.stateAt(now + 299_999L, t.outStartMillis, t.cooldownEndMillis)
+        )
+    }
+
+    @Test
+    fun expiringCooldownLandsOnGreenNotYellow() {
+        // The regression this file exists to catch, tested end to end:
+        // transition through returnStudent, then let the cooldown expire.
+        val t = Pass.returnStudent(now, 5)
+        assertEquals(
+            PassState.GREEN,
+            Pass.stateAt(now + 300_000L, t.outStartMillis, t.cooldownEndMillis)
+        )
+        assertEquals(
+            PassState.GREEN,
+            Pass.stateAt(now + 999_999L, t.outStartMillis, t.cooldownEndMillis)
+        )
+    }
+
+    @Test
+    fun resetReturnsToGreenFromAnywhere() {
+        val t = Pass.reset()
+        assertNull(t.outStartMillis)
+        assertNull(t.cooldownEndMillis)
+        assertEquals(PassState.GREEN, Pass.stateAt(now, t.outStartMillis, t.cooldownEndMillis))
+    }
+
+    @Test
+    fun fullCycleGreenToYellowToRedToGreen() {
+        var t = PassTimestamps(null, null)
+        assertEquals(PassState.GREEN, Pass.stateAt(now, t.outStartMillis, t.cooldownEndMillis))
+
+        t = Pass.goOut(now)
+        assertEquals(PassState.YELLOW, Pass.stateAt(now + 60_000L, t.outStartMillis, t.cooldownEndMillis))
+
+        t = Pass.returnStudent(now + 120_000L, 5)
+        assertEquals(PassState.RED, Pass.stateAt(now + 120_000L, t.outStartMillis, t.cooldownEndMillis))
+
+        assertEquals(
+            PassState.GREEN,
+            Pass.stateAt(now + 420_000L, t.outStartMillis, t.cooldownEndMillis)
+        )
     }
 
     @Test
