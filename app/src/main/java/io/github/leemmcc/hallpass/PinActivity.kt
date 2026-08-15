@@ -22,15 +22,42 @@ class PinActivity : AutoCloseActivity() {
             gravity = Gravity.CENTER
         }
 
-        val unlock = Button(this).apply {
-            text = "Unlock"
+        // Both actions require the correct PIN. Factored out so neither can
+        // drift into checking it differently.
+        fun withCorrectPin(action: () -> Unit) {
+            if (entry.text.toString() == settings.pin) {
+                action()
+            } else {
+                Toast.makeText(this, "Incorrect PIN", Toast.LENGTH_SHORT).show()
+                entry.setText("")
+            }
+        }
+
+        // First and most prominent: clearing a stuck yellow, or ending a
+        // cooldown early, is the only thing ever needed urgently mid-class.
+        // Going through the settings screen for it costs an extra screen and
+        // tap at exactly the wrong moment.
+        //
+        // Still behind the PIN. A no-PIN shortcut would be discovered by a
+        // student eventually, and "skip the cooldown" is the one thing the red
+        // screen exists to prevent.
+        val reset = Button(this).apply {
+            text = "Reset to green"
             setOnClickListener {
-                if (entry.text.toString() == settings.pin) {
+                withCorrectPin {
+                    settings.reset()
+                    Toast.makeText(this@PinActivity, "Reset to green", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        }
+
+        val openSettings = Button(this).apply {
+            text = "Open settings"
+            setOnClickListener {
+                withCorrectPin {
                     startActivity(Intent(this@PinActivity, SettingsActivity::class.java))
                     finish()
-                } else {
-                    Toast.makeText(this@PinActivity, "Incorrect PIN", Toast.LENGTH_SHORT).show()
-                    entry.setText("")
                 }
             }
         }
@@ -50,7 +77,8 @@ class PinActivity : AutoCloseActivity() {
                     gravity = Gravity.CENTER
                 })
                 addView(entry)
-                addView(unlock)
+                addView(reset)
+                addView(openSettings)
                 addView(cancel)
             }
         )
