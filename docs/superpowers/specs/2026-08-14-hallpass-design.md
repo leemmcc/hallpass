@@ -17,7 +17,9 @@ it clears.
 Both taps are real events the app understands, so "who taps and when" is enforced by the
 app rather than left to classroom convention.
 
-The device is an old tablet running **Android 8**, mounted on a wall and kept plugged in.
+The device is an old tablet running **Android 7 or older**, mounted on a wall and kept
+plugged in. The original design assumed Android 8; the tablet turned out to be older, and
+the app now targets `minSdk 21` (Android 5.0) so the exact version stops mattering.
 It is operated by a teacher and surrounded by children, so it must be hard to exit and
 hard to tamper with.
 
@@ -189,13 +191,13 @@ consequence as above.
 The app holds `FLAG_KEEP_SCREEN_ON` and runs in immersive full-screen mode, hiding the
 status and navigation bars.
 
-**This assumes the tablet is permanently plugged in.** An Android 8 device with the screen
+**This assumes the tablet is permanently plugged in.** An old device with the screen
 never sleeping will exhaust its battery in a few hours.
 
 ### Lockdown
 
 Android **screen pinning** (lock task mode), which is available without device-owner
-privileges on API 26. Exiting requires holding Back + Overview together, then the device
+privileges since API 21. Exiting requires holding Back + Overview together, then the device
 lock PIN.
 
 The app calls `startLockTask()` itself, so re-pinning after a reboot is one tap rather than
@@ -283,7 +285,9 @@ lifecycle code and under test.
 
 ### Configuration
 
-- `minSdk` 26, `targetSdk` 35
+- `minSdk` 21, `targetSdk` 35. 21 is the floor because every activity uses `Theme.Material`.
+  Going this low costs one API-23 guard around `lockTaskModeState` and a non-adaptive
+  launcher icon in `res/mipmap/` for devices below API 26.
 - Application ID: `io.github.leemmcc.hallpass`
 - Kotlin, Gradle, Android Gradle Plugin
 
