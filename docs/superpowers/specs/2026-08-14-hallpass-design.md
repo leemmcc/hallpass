@@ -61,10 +61,32 @@ Touches in RED do not affect the cooldown. A student cannot shorten the wait, an
 extend it by tapping. This was chosen over a teacher long-press override for
 predictability; the cooldown always runs exactly as long as configured.
 
-**Tap guard.** For the first 2 seconds of YELLOW, taps are ignored. The student who just
-tapped to leave still has a finger on the screen, and a double-tap or a lingering press
-would otherwise skip yellow entirely and start the cooldown as if they had already come
-back. Two seconds is long enough to cover that and far short of any real trip.
+**Tap guard.** For a configurable number of seconds after *any* state change, taps are
+ignored. Default **10 seconds**, range **0–60** (0 disables it), set in settings.
+
+It covers two distinct accidents:
+
+- **Entering YELLOW.** The student who just tapped to leave still has a finger on the
+  screen, and a double-tap or lingering press would otherwise skip yellow entirely and
+  start the cooldown as if they had already come back.
+- **Arriving at GREEN.** A student waiting at the wall taps or leans on the screen during
+  RED. The cooldown expires, green appears, and that stray touch instantly registers as a
+  new student leaving — yellow starts with nobody out. This is the case that motivated
+  making the guard configurable and raising it from 2 seconds.
+
+No extra state is stored for this. Both transitions already record their own moment:
+entering YELLOW sets `outStart`, and a cooldown's end *is* the instant GREEN arrived.
+
+Two deliberate exemptions:
+
+- **The corner long-press is never guarded.** Settings must stay reachable during a
+  lockout, or a badly-set value could make the app unadministrable.
+- **A manual reset is not followed by a lockout.** Both timestamps are cleared, so there is
+  no recent change to guard against — and the teacher just reset it on purpose.
+
+The trade: for those seconds after green appears, a tap does nothing. A student may read
+that as the app being broken and walk off. That is the price of not recording phantom
+trips, and the duration is adjustable if it proves wrong on the wall.
 
 **YELLOW has no duration.** It ends only when someone taps to return. If a student never
 taps back — sent to the nurse, went somewhere else, simply forgot — yellow keeps counting
@@ -152,11 +174,12 @@ eventually, and skipping the cooldown is the one thing the red screen exists to 
 
 ### Settings screen
 
-Contains exactly five things:
+Contains exactly six things:
 
 - **"Reset to green"** button, placed first and prominently — it is the one item needed
   urgently, mid-class, to clear a stuck yellow
 - Cooldown duration in minutes
+- Tap lockout in seconds
 - Change PIN
 - "Pin app to screen" button (invokes Android screen pinning)
 - "Auto-pin on launch" toggle

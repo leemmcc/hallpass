@@ -143,8 +143,8 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     private fun applyImmersiveMode() {
-        // WindowInsetsController does not exist on Android 8; these flags are
-        // deprecated on API 30+ but remain the correct choice at minSdk 26.
+        // WindowInsetsController does not exist below API 30; these flags are
+        // deprecated there but remain the only option at minSdk 21.
         window.decorView.systemUiVisibility =
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
