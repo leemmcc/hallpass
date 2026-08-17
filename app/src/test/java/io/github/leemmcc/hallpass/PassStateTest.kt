@@ -192,42 +192,45 @@ class PassStateTest {
         )
     }
 
-    // --- millisSinceLastChange: the tap guard's clock reading after any
-    // state change, not just entry into YELLOW ---
+    // --- millisSinceLastChange: the tap guard's clock reading, driven by a
+    // dedicated timestamp rather than inferred from outStart/cooldownEnd ---
 
     @Test
-    fun millisSinceLastChangeIsUnboundedWhenBothTimestampsAreNull() {
-        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, null, null))
+    fun millisSinceLastChangeIsUnboundedWhenNoTimestampIsRecorded() {
+        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, null))
     }
 
     @Test
-    fun millisSinceLastChangeReadsOutStartWhenSet() {
-        assertEquals(
-            30_000L,
-            Pass.millisSinceLastChange(now, now - 30_000L, null)
-        )
-    }
-
-    @Test
-    fun millisSinceLastChangeReadsCooldownEndWhenOutStartIsNull() {
-        // GREEN just arrived: outStart is null, cooldownEnd is in the past.
-        assertEquals(
-            5_000L,
-            Pass.millisSinceLastChange(now, null, now - 5_000L)
-        )
-    }
-
-    @Test
-    fun millisSinceLastChangePrefersOutStartWhenBothAreSet() {
-        assertEquals(
-            10_000L,
-            Pass.millisSinceLastChange(now, now - 10_000L, now - 999_999L)
-        )
+    fun millisSinceLastChangeReturnsForwardDeltaAsIs() {
+        assertEquals(30_000L, Pass.millisSinceLastChange(now, now - 30_000L))
     }
 
     @Test
     fun millisSinceLastChangeTreatsBackwardsClockAsNoRecentChange() {
-        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, now + 5_000L, null))
-        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, null, now + 5_000L))
+        assertEquals(Long.MAX_VALUE, Pass.millisSinceLastChange(now, now + 5_000L))
+    }
+
+    @Test
+    fun millisSinceLastChangeStillGatesTheTapGuardAtTenSeconds() {
+        assertEquals(
+            TouchAction.IGNORE,
+            TouchRouter.route(
+                inCorner = false,
+                heldMillis = 10L,
+                state = PassState.GREEN,
+                millisSinceChange = Pass.millisSinceLastChange(now, now - 9_999L),
+                tapGuardMillis = 10_000L
+            )
+        )
+        assertEquals(
+            TouchAction.GO_OUT,
+            TouchRouter.route(
+                inCorner = false,
+                heldMillis = 10L,
+                state = PassState.GREEN,
+                millisSinceChange = Pass.millisSinceLastChange(now, now - 10_000L),
+                tapGuardMillis = 10_000L
+            )
+        )
     }
 }

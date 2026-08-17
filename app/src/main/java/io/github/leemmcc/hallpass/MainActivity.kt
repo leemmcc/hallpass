@@ -119,10 +119,10 @@ class MainActivity : Activity() {
         val cooldownEnd = settings.cooldownEndMillis
         val state = Pass.stateAt(now, outStart, cooldownEnd)
         // Time since the state last changed, for the post-change tap guard:
-        // it reads outStart for a fresh YELLOW or cooldownEnd for a fresh
-        // GREEN, whichever transition happened most recently. A backwards
+        // reads a dedicated timestamp recorded by every transition, rather
+        // than inferring the moment from outStart/cooldownEnd. A backwards
         // clock reads as MAX_VALUE so the guard fails open.
-        val millisSinceChange = Pass.millisSinceLastChange(now, outStart, cooldownEnd)
+        val millisSinceChange = Pass.millisSinceLastChange(now, settings.lastChangeMillis)
 
         when (
             TouchRouter.route(

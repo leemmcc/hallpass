@@ -46,37 +46,48 @@ class Settings(context: Context) {
     val cooldownEndMillis: Long?
         get() = prefs.getLong(KEY_COOLDOWN_END, NONE).takeIf { it != NONE }
 
+    val lastChangeMillis: Long?
+        get() = prefs.getLong(KEY_LAST_CHANGE, NONE).takeIf { it != NONE }
+
     /**
      * The three transitions delegate to the tested pure functions in Pass.
      * This class only persists what they return -- deliberately, so the
      * invariant that RETURN clears outStart lives in unit-tested code rather
      * than in this untested plumbing.
      */
-    fun goOut(nowMillis: Long) = persist(Pass.goOut(nowMillis))
+    fun goOut(nowMillis: Long) = persist(Pass.goOut(nowMillis), lastChange = nowMillis)
 
     fun returnStudent(nowMillis: Long) =
-        persist(Pass.returnStudent(nowMillis, cooldownMinutes))
-
-    fun reset() = persist(Pass.reset())
+        persist(Pass.returnStudent(nowMillis, cooldownMinutes), lastChange = nowMillis)
 
     /**
-     * Clears an expired cooldown so a backwards clock cannot resurrect RED.
+     * Also clears lastChange, so a deliberate admin reset is not mistaken for
+     * a recent automatic transition and followed by a tap guard lockout.
+     */
+    fun reset() = persist(Pass.reset(), lastChange = null)
+
+    /**
+     * Clears an expired cooldown so a backwards clock cannot resurrect RED,
+     * recording the moment GREEN arrived as it goes.
      *
-     * Deliberately waits until the tap guard has also elapsed: cooldownEndMillis
-     * is what millisSinceLastChange reads to guard GREEN, so clearing it the
-     * instant the cooldown expires would silently disable that guard.
+     * Clearing happens immediately on expiry. The tap guard reads lastChange,
+     * not cooldownEnd, so nothing depends on the expired value surviving.
      */
     fun clearExpiredCooldown(nowMillis: Long) {
         val end = cooldownEndMillis ?: return
-        if (nowMillis >= end + tapGuardSeconds * 1000L) {
-            prefs.edit().putLong(KEY_COOLDOWN_END, NONE).apply()
+        if (nowMillis >= end) {
+            prefs.edit()
+                .putLong(KEY_COOLDOWN_END, NONE)
+                .putLong(KEY_LAST_CHANGE, end)
+                .apply()
         }
     }
 
-    private fun persist(timestamps: PassTimestamps) {
+    private fun persist(timestamps: PassTimestamps, lastChange: Long?) {
         prefs.edit()
             .putLong(KEY_OUT_START, timestamps.outStartMillis ?: NONE)
             .putLong(KEY_COOLDOWN_END, timestamps.cooldownEndMillis ?: NONE)
+            .putLong(KEY_LAST_CHANGE, lastChange ?: NONE)
             .apply()
     }
 
@@ -88,5 +99,6 @@ class Settings(context: Context) {
         const val KEY_AUTO_PIN = "auto_pin"
         const val KEY_OUT_START = "out_start"
         const val KEY_COOLDOWN_END = "cooldown_end"
+        const val KEY_LAST_CHANGE = "last_change"
     }
 }

@@ -64,21 +64,18 @@ object Pass {
     /**
      * Milliseconds since the state last changed, for the tap guard.
      *
-     * No separate timestamp is stored because both transitions already record
-     * their own moment: entering YELLOW sets outStart, and the cooldown's end
-     * is exactly when GREEN arrived.
+     * Reads a dedicated timestamp rather than inferring the moment from
+     * outStart/cooldownEnd. Inferring it forced cooldownEnd to be kept alive
+     * past its expiry, which let a backwards clock jump resurrect a false RED.
+     * One timestamp, one purpose.
      *
-     * Long.MAX_VALUE means "no recent change, do not guard" -- a fresh install,
-     * or after an admin reset cleared both. A backwards clock also reads as
-     * MAX_VALUE so the guard fails open rather than jamming shut.
+     * Long.MAX_VALUE means "no recent change, do not guard": a fresh install,
+     * or an admin reset. A backwards clock also reads as MAX_VALUE so the
+     * guard fails open rather than jamming shut.
      */
-    fun millisSinceLastChange(
-        nowMillis: Long,
-        outStartMillis: Long?,
-        cooldownEndMillis: Long?
-    ): Long {
-        val reference = outStartMillis ?: cooldownEndMillis ?: return Long.MAX_VALUE
-        val delta = nowMillis - reference
+    fun millisSinceLastChange(nowMillis: Long, lastChangeMillis: Long?): Long {
+        if (lastChangeMillis == null) return Long.MAX_VALUE
+        val delta = nowMillis - lastChangeMillis
         return if (delta < 0L) Long.MAX_VALUE else delta
     }
 }
