@@ -74,8 +74,16 @@ It covers two distinct accidents:
   new student leaving — yellow starts with nobody out. This is the case that motivated
   making the guard configurable and raising it from 2 seconds.
 
-No extra state is stored for this. Both transitions already record their own moment:
-entering YELLOW sets `outStart`, and a cooldown's end *is* the instant GREEN arrived.
+A dedicated `lastChange` timestamp records when the state last changed. Every transition
+writes it, and an admin reset clears it.
+
+The first attempt avoided that extra field by inferring the moment from the existing
+timestamps — a cooldown's end *is* the instant GREEN arrived. That inference forced
+`cooldownEnd` to be kept alive past its own expiry, which reopened a bug an earlier fix had
+closed: a backwards clock jump landing in that window resurrects a false RED with nobody
+out, and it persists for roughly the size of the jump. One timestamp was being asked to
+serve two purposes. The separate field costs four lines and removes the conflict, letting
+the expired cooldown be cleared the instant it expires as originally intended.
 
 Two deliberate exemptions:
 
