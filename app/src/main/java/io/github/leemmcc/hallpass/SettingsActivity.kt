@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
@@ -129,8 +130,10 @@ class SettingsActivity : AutoCloseActivity() {
             setOnClickListener { finish() }
         }
 
-        setContentView(
-            LinearLayout(this).apply {
+        // Scrollable: the control list has grown past what a short screen shows
+        // at large font sizes, and a control you cannot reach is a control you
+        // do not have.
+        val form = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(48, 48, 48, 48)
                 addView(resetButton)
@@ -145,10 +148,10 @@ class SettingsActivity : AutoCloseActivity() {
                 addView(savePin)
                 addView(pinNow)
                 addView(autoPin)
-                addView(done)
                 addView(exit)
-            }
-        )
+                addView(done)
+        }
+        setContentView(ScrollView(this).apply { addView(form) })
     }
 
     private fun toast(message: String) {

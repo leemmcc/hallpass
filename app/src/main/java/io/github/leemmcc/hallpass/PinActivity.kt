@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
@@ -74,8 +75,7 @@ class PinActivity : AutoCloseActivity() {
             setOnClickListener { finish() }
         }
 
-        setContentView(
-            LinearLayout(this).apply {
+        val form = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(48, 96, 48, 48)
                 addView(TextView(this@PinActivity).apply {
@@ -88,7 +88,7 @@ class PinActivity : AutoCloseActivity() {
                 addView(openSettings)
                 addView(exit)
                 addView(cancel)
-            }
-        )
+        }
+        setContentView(ScrollView(this).apply { addView(form) })
     }
 }

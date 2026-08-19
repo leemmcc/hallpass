@@ -68,11 +68,18 @@ abstract class AutoCloseActivity : Activity() {
      * goes unnoticed.
      */
     protected fun confirmAndExitApp() {
+        // The idle timer has to be held off while the dialog is up. Touches on
+        // a dialog land on its own window, not this activity's, so they never
+        // reach onUserInteraction and never restart the timer -- leave it
+        // running and a teacher interrupted mid-decision comes back to find
+        // the question silently withdrawn.
+        pauseIdleTimer()
         AlertDialog.Builder(this)
             .setTitle("Exit Hall Pass?")
             .setMessage("The pass display will close and the screen will be unpinned.")
             .setPositiveButton("Exit") { _, _ -> exitApp() }
             .setNegativeButton("Cancel", null)
+            .setOnDismissListener { restartIdleTimer() }
             .show()
     }
 
@@ -84,6 +91,10 @@ abstract class AutoCloseActivity : Activity() {
         // in the task, and finishing only this one would drop straight back to
         // the pass display.
         finishAffinity()
+    }
+
+    private fun pauseIdleTimer() {
+        handler.removeCallbacks(closeOnIdle)
     }
 
     private fun restartIdleTimer() {
