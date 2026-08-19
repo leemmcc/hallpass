@@ -62,6 +62,13 @@ class PinActivity : AutoCloseActivity() {
             }
         }
 
+        // Also behind the PIN, and confirmed, since it closes the display the
+        // whole classroom relies on.
+        val exit = Button(this).apply {
+            text = "Exit app"
+            setOnClickListener { withCorrectPin { confirmAndExitApp() } }
+        }
+
         val cancel = Button(this).apply {
             text = "Cancel"
             setOnClickListener { finish() }
@@ -79,6 +86,7 @@ class PinActivity : AutoCloseActivity() {
                 addView(entry)
                 addView(reset)
                 addView(openSettings)
+                addView(exit)
                 addView(cancel)
             }
         )

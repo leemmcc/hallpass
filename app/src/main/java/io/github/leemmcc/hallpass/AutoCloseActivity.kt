@@ -1,6 +1,7 @@
 package io.github.leemmcc.hallpass
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -49,6 +50,40 @@ abstract class AutoCloseActivity : Activity() {
         super.onStop()
         handler.removeCallbacks(closeOnIdle)
         finish()
+    }
+
+    /**
+     * Confirm, then leave the app entirely.
+     *
+     * Screen pinning blocks an app from closing itself, so unpinning has to
+     * come first -- that is the whole point of the button, since the manual
+     * route is Back+Overview followed by the device lock PIN.
+     *
+     * Note what this trades: exiting used to require the *device* PIN, which a
+     * student is unlikely to know. It now requires the *app* PIN, so the app
+     * is only as hard to close as that PIN is to guess.
+     *
+     * Confirmed first because a fumbled tap leaves the wall showing the
+     * launcher instead of the pass, which is exactly the kind of thing that
+     * goes unnoticed.
+     */
+    protected fun confirmAndExitApp() {
+        AlertDialog.Builder(this)
+            .setTitle("Exit Hall Pass?")
+            .setMessage("The pass display will close and the screen will be unpinned.")
+            .setPositiveButton("Exit") { _, _ -> exitApp() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun exitApp() {
+        // Throws if the task was never pinned; that is a fine reason to carry
+        // on and close anyway.
+        runCatching { stopLockTask() }
+        // finishAffinity, not finish: MainActivity is still below this screen
+        // in the task, and finishing only this one would drop straight back to
+        // the pass display.
+        finishAffinity()
     }
 
     private fun restartIdleTimer() {

@@ -117,6 +117,13 @@ class SettingsActivity : AutoCloseActivity() {
             setOnCheckedChangeListener { _, checked -> settings.autoPin = checked }
         }
 
+        // Last, and well away from "Reset to green" at the top: this one is
+        // rare and closes the classroom display.
+        val exit = Button(this).apply {
+            text = "Exit app"
+            setOnClickListener { confirmAndExitApp() }
+        }
+
         val done = Button(this).apply {
             text = "Done"
             setOnClickListener { finish() }
@@ -139,6 +146,7 @@ class SettingsActivity : AutoCloseActivity() {
                 addView(pinNow)
                 addView(autoPin)
                 addView(done)
+                addView(exit)
             }
         )
     }
