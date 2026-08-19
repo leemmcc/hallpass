@@ -182,7 +182,7 @@ eventually, and skipping the cooldown is the one thing the red screen exists to 
 
 ### Settings screen
 
-Contains exactly six things:
+Contains exactly seven things:
 
 - **"Reset to green"** button, placed first and prominently — it is the one item needed
   urgently, mid-class, to clear a stuck yellow
@@ -191,11 +191,30 @@ Contains exactly six things:
 - Change PIN
 - "Pin app to screen" button (invokes Android screen pinning)
 - "Auto-pin on launch" toggle
+- **"Exit app"**, which unpins and closes the app entirely
 
 Reset sits behind the long-press and PIN like everything else. That is deliberate — it
 would be the single most attractive button for a student to press — but it does mean
 clearing a stuck yellow takes a few seconds of gesture and PIN entry. If that proves too
 slow in practice, a dedicated teacher gesture can be added later.
+
+### Exiting the app
+
+Screen pinning blocks an app from closing itself, so the Exit button calls `stopLockTask()`
+first and then finishes the whole task. That replaces the manual route -- holding Back and
+Overview together, then entering the device lock PIN -- with one confirmed tap. It is
+offered on both the PIN screen and the settings screen, PIN-gated in both.
+
+**The trade this makes, deliberately:** exiting used to require the *device* PIN, which a
+student almost certainly does not know. It now requires the *app* PIN instead, so the app is
+only as hard to close as that PIN is to guess. That is a good reason to change it off the
+default `1234`.
+
+Confirmed before it acts, because a fumbled tap leaves the wall showing the launcher rather
+than the pass -- and while the dialog is open the 60-second idle timer is suspended. Touches
+on a dialog land on the dialog's own window rather than the activity's, so they never reach
+`onUserInteraction`; left running, the timer would withdraw the question from under a
+teacher who got interrupted mid-decision.
 
 ### Both settings screens close themselves
 
@@ -210,6 +229,9 @@ with the device lock PIN, then uninstalling and reinstalling, losing all setting
 `onStop` rather than `onPause`, specifically: the screen-pinning confirmation is a system
 dialog that pauses but does not stop the activity beneath it. Using `onPause` would dismiss
 the settings screen out from under its own confirmation prompt.
+
+Both screens scroll. The settings list has grown to fifteen controls, and on a short screen
+or at a large system font the last of them would otherwise sit off the bottom, unreachable.
 
 Both screens also hold `FLAG_KEEP_SCREEN_ON`. The main display holds it too, but without it
 here the tablet's normal timeout blanks the wall while settings are open.
